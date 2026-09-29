@@ -24,10 +24,18 @@
   :root{
     --accent: {{ cfg.accent }};
     --paper:#fff; --ink:#111; --ink-2:#56544e; --rule:#e2e0d9; --bar:#e8e6df;
+    /* Chart roles. One blue hue in two steps, validated against this
+       page's own surfaces in both modes — not an automatic flip. */
+    --viz-mark:#14366b; --viz-mark-2:#86b6ef;
+    --viz-grid:#e1e0d9; --viz-axis:#c3c2b7; --viz-muted:#898781;
     color-scheme: light dark;
   }
   @media (prefers-color-scheme: dark){
-    :root{ --paper:#12121a; --ink:#f0eee8; --ink-2:#a8a49a; --rule:#2e2d35; --bar:#24242e; }
+    :root{
+      --paper:#12121a; --ink:#f0eee8; --ink-2:#a8a49a; --rule:#2e2d35; --bar:#24242e;
+      --viz-mark:#9ec5f4; --viz-mark-2:#1c5cab;
+      --viz-grid:#2c2c2a; --viz-axis:#383835; --viz-muted:#898781;
+    }
   }
   *{box-sizing:border-box}
   body{
@@ -52,8 +60,40 @@
   .row{display:grid; grid-template-columns:minmax(6rem,10rem) 1fr auto; gap:.6rem; align-items:center}
   .row .name{font-size:.9rem; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .track{background:var(--bar); height:1.4rem; position:relative}
-  .fill{background:var(--accent); height:100%}
+  .fill{background:var(--viz-mark); height:100%; display:block}
   .num{font-variant-numeric:tabular-nums; font-size:.9rem}
+
+  .kpi{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    background:var(--rule); border:1px solid var(--rule); margin:2rem 0;
+  }
+  .kpi > div{background:var(--paper); padding:.9rem 1rem}
+  .k-label{font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-2)}
+  .k-value{font-size:2.1rem; line-height:1.15; margin:.2rem 0 .3rem}
+  .k-note{font-size:.82rem; color:var(--ink-2); margin:0}
+  @media (max-width:40rem){ .kpi{grid-template-columns:1fr} }
+
+  figure{margin:1.75rem 0 0}
+  figcaption{font-size:.85rem; color:var(--ink-2); margin-top:.6rem; max-width:34rem}
+  .viz{width:100%; height:auto; display:block}
+  .scroll .viz{min-width:40rem}
+  .viz text{font: .69rem/1 ui-serif, Georgia, serif; fill:var(--ink-2)}
+  .viz .tick{fill:var(--viz-muted); font-variant-numeric:tabular-nums}
+  .viz .atitle{fill:var(--ink-2)}
+  .viz .grid{stroke:var(--viz-grid); stroke-width:1}
+  .viz .axis{stroke:var(--viz-axis); stroke-width:1}
+  .viz .conn{stroke:var(--viz-axis); stroke-width:2; stroke-linecap:round}
+  .viz .dot{fill:var(--viz-mark); stroke:var(--paper); stroke-width:2}
+  .viz .dot-before{fill:var(--viz-mark-2); stroke:var(--paper); stroke-width:2}
+  .viz .dlabel{fill:var(--ink)}
+  .viz .val{fill:var(--ink-2); font-variant-numeric:tabular-nums}
+  .viz .hit{fill:transparent}
+  .viz g:hover .dot, .viz g:focus .dot{r:7}
+  .viz g:hover .conn{stroke:var(--ink-2)}
+
+  .legend{display:flex; gap:1.1rem; flex-wrap:wrap; font-size:.85rem; color:var(--ink-2); margin:.2rem 0 .4rem}
+  .legend span{display:inline-flex; align-items:center; gap:.4rem}
+  .swatch{width:.7rem; height:.7rem; border-radius:50%; display:inline-block}
 
   .scroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
   table{border-collapse:collapse; width:100%; font-size:.92rem; min-width:30rem}
@@ -78,6 +118,16 @@
   <p class="notice"><strong>Not real data.</strong><br>{{ cfg.data_notice }}</p>
   {% endif %}
 
+  <div class="kpi">
+    {% for s in stats %}
+    <div>
+      <p class="k-label">{{ s.label }}</p>
+      <p class="k-value">{{ s.value }}</p>
+      <p class="k-note">{{ s.note }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
   <h2>{{ cfg.chart_title or value_col|title ~ ' by ' ~ label_col }}</h2>
   <div class="chart">
     {% for r in rows[:25] %}
@@ -89,11 +139,100 @@
     {% endfor %}
   </div>
 
+
+  <h2>More lane, less traffic</h2>
+  <figure>
+    <div class="scroll">
+    <svg class="viz" viewBox="0 0 {{ scatter.width }} {{ scatter.height }}"
+         role="img" aria-label="Scatter plot of bike lane miles added against
+         the fall in car traffic, for each of {{ rows|length }} cities. The two
+         rise together. Every value is listed in the table below.">
+      {% for t in scatter.y_ticks %}
+      <line class="grid" x1="{{ scatter.plot.x }}" y1="{{ t.py }}"
+            x2="{{ scatter.plot.x + scatter.plot.w }}" y2="{{ t.py }}"/>
+      <text class="tick" x="{{ scatter.plot.x - 8 }}" y="{{ t.py + 4 }}"
+            text-anchor="end">{{ t.v }}%</text>
+      {% endfor %}
+
+      <line class="axis" x1="{{ scatter.plot.x }}" y1="{{ scatter.baseline_y }}"
+            x2="{{ scatter.plot.x + scatter.plot.w }}" y2="{{ scatter.baseline_y }}"/>
+      {% for t in scatter.x_ticks %}
+      <text class="tick" x="{{ t.px }}" y="{{ scatter.baseline_y + 18 }}"
+            text-anchor="middle">{{ t.v }}</text>
+      {% endfor %}
+
+      <text class="atitle" x="{{ scatter.plot.x + scatter.plot.w / 2 }}"
+            y="{{ scatter.height - 6 }}" text-anchor="middle">Bike lane miles added</text>
+      <text class="atitle" x="14" y="{{ scatter.plot.y + scatter.plot.h / 2 }}"
+            text-anchor="middle"
+            transform="rotate(-90 14 {{ scatter.plot.y + scatter.plot.h / 2 }})">Car traffic decline</text>
+
+      {% for p in scatter.points %}
+      <g tabindex="0">
+        <title>{{ p.title }}</title>
+        <circle class="hit" cx="{{ p.x }}" cy="{{ p.y }}" r="14"/>
+        <circle class="dot" cx="{{ p.x }}" cy="{{ p.y }}" r="5"/>
+        {% if p.label %}
+        <text class="dlabel" x="{{ p.x + p.dx }}" y="{{ p.y + 4 }}"
+              text-anchor="{{ p.anchor }}">{{ p.label }}</text>
+        {% endif %}
+      </g>
+      {% endfor %}
+    </svg>
+    </div>
+    <figcaption>
+      Each dot is one city. Cities that built more lane saw larger falls in car
+      traffic (correlation {{ corr }}). A correlation this tight is a property of
+      invented data — real cities are messier, and a relationship like this one
+      still would not prove the lanes caused the fall.
+    </figcaption>
+  </figure>
+
+  <h2>But the crash rate stayed put</h2>
+  <figure>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--viz-mark-2)"></i>Before</span>
+      <span><i class="swatch" style="background:var(--viz-mark)"></i>After</span>
+    </div>
+    <div class="scroll">
+    <svg class="viz" viewBox="0 0 {{ dumbbell.width }} {{ dumbbell.height }}"
+         role="img" aria-label="Crashes per 10,000 daily car trips in each city,
+         before and after the new bike lanes. The two values sit on top of each
+         other in most cities. Every value is listed in the table below.">
+      {% for t in dumbbell.x_ticks %}
+      <line class="grid" x1="{{ t.px }}" y1="{{ dumbbell.plot.y - 8 }}"
+            x2="{{ t.px }}" y2="{{ dumbbell.plot.y + dumbbell.plot.h }}"/>
+      <text class="tick" x="{{ t.px }}" y="{{ dumbbell.plot.y - 14 }}"
+            text-anchor="middle">{{ t.v }}</text>
+      {% endfor %}
+
+      {% for r in dumbbell.rows %}
+      <g tabindex="0">
+        <title>{{ r.title }}</title>
+        <rect class="hit" x="0" y="{{ r.y - dumbbell.row_h / 2 }}"
+              width="{{ dumbbell.width }}" height="{{ dumbbell.row_h }}"/>
+        <text x="{{ dumbbell.plot.x - 10 }}" y="{{ r.y + 4 }}" text-anchor="end">{{ r.name }}</text>
+        <line class="conn" x1="{{ r.x_before }}" y1="{{ r.y }}" x2="{{ r.x_after }}" y2="{{ r.y }}"/>
+        <circle class="dot-before" cx="{{ r.x_before }}" cy="{{ r.y }}" r="5"/>
+        <circle class="dot" cx="{{ r.x_after }}" cy="{{ r.y }}" r="5"/>
+        <text class="val" x="{{ dumbbell.value_x }}" y="{{ r.y + 4 }}">{{ r.delta }}</text>
+      </g>
+      {% endfor %}
+    </svg>
+    </div>
+    <figcaption>
+      Crashes per 10,000 daily car trips, before and after, with the change at
+      the right. The pairs barely separate: the rate fell in
+      {{ stats[2].value }} cities, which is what chance alone would produce.
+      Fewer cars meant fewer crashes in total, but no city got safer per car.
+    </figcaption>
+  </figure>
+
   <h2>The data</h2>
   <div class="scroll">
     <table>
       <thead>
-        <tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr>
+        <tr>{% for c in columns %}<th>{{ c.replace('_', ' ') }}</th>{% endfor %}</tr>
       </thead>
       <tbody>
         {% for r in rows %}

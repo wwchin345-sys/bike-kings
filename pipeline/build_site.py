@@ -10,6 +10,7 @@ import shutil
 import pandas as pd
 from jinja2 import Template
 
+import charts
 from common import DATA, SITE, TEMPLATES, load_config
 
 
@@ -21,6 +22,10 @@ def build():
     rows = df.to_dict(orient="records")
     values = df[cfg["value_column"]].tolist()
 
+    # Sorted by the highest after-rate so the dumbbell reads as a ranking
+    # rather than inheriting the bar chart's order.
+    by_rate = df.sort_values("crashes_per_10k_after", ascending=False)
+
     html = Template((TEMPLATES / "index.html").read_text(encoding="utf-8")).render(
         cfg=cfg,
         meta=meta,
@@ -30,6 +35,12 @@ def build():
         value_col=cfg["value_column"],
         max_value=max(values) if values else 1,
         data_json=json.dumps(rows),
+        stats=charts.headline_stats(df),
+        scatter=charts.scatter(df, "lane_miles_added",
+                               "traffic_decline_pct", cfg["label_column"]),
+        dumbbell=charts.dumbbell(by_rate, "crashes_per_10k_before",
+                                 "crashes_per_10k_after", cfg["label_column"]),
+        corr=round(df["lane_miles_added"].corr(df["traffic_decline_pct"]), 2),
     )
 
     SITE.mkdir(exist_ok=True)
