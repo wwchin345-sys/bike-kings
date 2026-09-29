@@ -42,6 +42,12 @@
   a{color:var(--accent)}
   @media (prefers-color-scheme: dark){ a{color:#9fc0f2} }
 
+  .notice{
+    border:2px solid var(--accent); padding:.8rem 1rem; margin:0 0 2rem;
+    font-size:.92rem; line-height:1.45;
+  }
+  .notice strong{text-transform:uppercase; letter-spacing:.06em; font-size:.78rem}
+
   .chart{margin:1.5rem 0; display:grid; gap:.4rem}
   .row{display:grid; grid-template-columns:minmax(6rem,10rem) 1fr auto; gap:.6rem; align-items:center}
   .row .name{font-size:.9rem; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -68,7 +74,11 @@
     <p class="standfirst">{{ cfg.description }}</p>
   </header>
 
-  <h2>{{ value_col|title }} by {{ label_col }}</h2>
+  {% if cfg.data_notice %}
+  <p class="notice"><strong>Not real data.</strong><br>{{ cfg.data_notice }}</p>
+  {% endif %}
+
+  <h2>{{ cfg.chart_title or value_col|title ~ ' by ' ~ label_col }}</h2>
   <div class="chart">
     {% for r in rows[:25] %}
     <div class="row">

@@ -16,12 +16,12 @@ from common import DATA, SITE, TEMPLATES, load_config
 def build():
     cfg = load_config()
     df = pd.read_csv(DATA / "site_data.csv")
-    meta = json.loads((DATA / "meta.json").read_text())
+    meta = json.loads((DATA / "meta.json").read_text(encoding="utf-8"))
 
     rows = df.to_dict(orient="records")
     values = df[cfg["value_column"]].tolist()
 
-    html = Template((TEMPLATES / "index.html").read_text()).render(
+    html = Template((TEMPLATES / "index.html").read_text(encoding="utf-8")).render(
         cfg=cfg,
         meta=meta,
         rows=rows,
@@ -33,7 +33,7 @@ def build():
     )
 
     SITE.mkdir(exist_ok=True)
-    (SITE / "index.html").write_text(html)
+    (SITE / "index.html").write_text(html, encoding="utf-8")
 
     # The raw data, downloadable from the site.
     shutil.copy(DATA / "site_data.csv", SITE / "data.csv")

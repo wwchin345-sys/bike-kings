@@ -20,7 +20,29 @@ def transform():
     df = pd.read_csv(RAW)
 
     # --- your work goes here -------------------------------------------
-    df = df.dropna(subset=[cfg["label_column"], cfg["value_column"]])
+    before, after = "car_trips_daily_before", "car_trips_daily_after"
+    required = ["label", before, after, "crashes_before", "crashes_after",
+                "lane_miles_added"]
+    df = df.dropna(subset=required)
+    df = df[df[before] > 0]
+
+    # How much car traffic fell, as a share of the before figure. Positive
+    # means traffic went down.
+    df["traffic_decline_pct"] = ((df[before] - df[after]) / df[before] * 100).round(1)
+
+    # Crashes per 10,000 daily car trips. This is the number that matters:
+    # fewer cars means fewer crashes mechanically, even if nothing got safer,
+    # so the raw crash count on its own would flatter the result.
+    df["crashes_per_10k_before"] = (df["crashes_before"] / (df[before] / 10_000)).round(1)
+    df["crashes_per_10k_after"] = (df["crashes_after"] / (df[after] / 10_000)).round(1)
+    df["crash_rate_change_pct"] = (
+        (df["crashes_per_10k_after"] - df["crashes_per_10k_before"])
+        / df["crashes_per_10k_before"] * 100
+    ).round(1)
+
+    df = df[["label", "lane_miles_added", "traffic_decline_pct",
+             "crashes_per_10k_before", "crashes_per_10k_after",
+             "crash_rate_change_pct"]]
     df = df.sort_values(cfg["value_column"], ascending=False)
     # -------------------------------------------------------------------
 
